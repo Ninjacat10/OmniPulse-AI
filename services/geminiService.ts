@@ -4,17 +4,36 @@ import { FinancialReport, AlphaPick } from "../types";
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-// Helper to clean JSON from markdown fences
+// Helper to clean JSON from markdown fences and conversational text
 const cleanJson = (text: string): string => {
-    let cleaned = text.trim();
-    if (cleaned.startsWith('```json')) {
-        cleaned = cleaned.substring(7);
-    } else if (cleaned.startsWith('```')) {
-        cleaned = cleaned.substring(3);
+    // First, remove markdown code blocks
+    let cleaned = text.replace(/```json/g, '').replace(/```/g, '').trim();
+    
+    // Find the first occurrence of '{' or '['
+    const firstBrace = cleaned.indexOf('{');
+    const firstBracket = cleaned.indexOf('[');
+    
+    let start = -1;
+    if (firstBrace !== -1 && firstBracket !== -1) {
+        start = Math.min(firstBrace, firstBracket);
+    } else if (firstBrace !== -1) {
+        start = firstBrace;
+    } else if (firstBracket !== -1) {
+        start = firstBracket;
     }
-    if (cleaned.endsWith('```')) {
-        cleaned = cleaned.substring(0, cleaned.length - 3);
+    
+    if (start === -1) return cleaned;
+    
+    // Find the last occurrence of '}' or ']'
+    const lastBrace = cleaned.lastIndexOf('}');
+    const lastBracket = cleaned.lastIndexOf(']');
+    
+    const end = Math.max(lastBrace, lastBracket);
+    
+    if (end !== -1 && end > start) {
+        return cleaned.substring(start, end + 1);
     }
+    
     return cleaned;
 };
 
@@ -158,7 +177,8 @@ export const scanMarket = async (): Promise<AlphaPick[]> => {
     3. Technical Breakouts
     4. Neglected/Undervalued status with upcoming catalysts
     
-    Return the result as a JSON array of objects. No markdown.
+    CRITICAL: Return the result as a strictly valid JSON ARRAY of objects. 
+    DO NOT output any conversational text, markdown formatting, or explanations outside the JSON array.
     
     Structure:
     [
@@ -186,11 +206,12 @@ export const scanMarket = async (): Promise<AlphaPick[]> => {
         const text = response.text;
         if (!text) throw new Error("No response from AI");
         
+        console.log("Raw Scan Response:", text); // Debugging
         const jsonString = cleanJson(text);
         return JSON.parse(jsonString) as AlphaPick[];
 
     } catch (error) {
         console.error("Market Scan Failed:", error);
-        throw new Error("Scan failed.");
+        throw new Error("Scan failed. The AI response was not in the expected format.");
     }
 }
