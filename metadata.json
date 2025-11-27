@@ -1,0 +1,5 @@
+{
+  "name": "OmniPulse AI",
+  "description": "A financial intelligence platform acting as the 'Bloomberg Terminal for the AI Era'. It aggregates sentiment, macro data, and generates high-probability price targets.",
+  "requestFramePermissions": []
+}
